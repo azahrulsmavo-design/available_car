@@ -1,0 +1,56 @@
+﻿Sheets: ['MASTER', 'Sheet16', 'SUMMARY KPI95%', 'summary available', 'LJR - JKT', 'LJR - CAB', 'LJR - CL', 'PSC', 'MJR', 'LJRS - MKS', 'LJRS - CAB', 'LJRS - CL', 'Tarikan Ceklis K.BY Sistem', 'DAILY REPORT', 'REKAP RESET CHEKLIS 2025', 'REKAP RESET CHEKLIS - 2026', 'HASIL CEK P2H', 'DASHBOARD Cheklis K.BY Sistem', 'Sheet18', 'Sheet17', 'Pivot Table 1']
+
+--- Sheet Pertama: MASTER ---
+         NOPOL   BU DEPT  ...   JENIS  MOBIL        MERK TAHUN PEMBUATAN
+0   B 5620 TWG  LJR   CL  ...  MOTOR LISTRIK      GESITS            2022
+1   B 5618 TWG  LJR   CL  ...  MOTOR LISTRIK      GESITS            2022
+2   B 5619 TWG  LJR   CL  ...  MOTOR LISTRIK      GESITS            2022
+3   B 5347 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+4   B 5750 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+5   B 5085 TPH  LJR   CL  ...          MOTOR       HONDA            2023
+6   B 9631 PXS  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+7   B 9820 PCM  LJR   CL  ...       CDE LONG  MITSUBISHI            2017
+8   B 9847 PCM  LJR   CL  ...    PICK UP BOX      SUZUKI            2017
+9   B 9848 PCM  LJR   CL  ...    PICK UP BOX      SUZUKI            2017
+10  B 9785 PCP  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+11  B 9448 TXW  LJR   CL  ...    PICK UP BOX      SUZUKI            2023
+12  B 5769 TRH  LJR   CL  ...          MOTOR        REVO            2023
+13  B 9876 PCP  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+14  B 9062 TXW  LJR   CL  ...    PICK UP BOX      SUZUKI            2022
+15  B 9625 PCL  LJR   CL  ...    PICK UP BOX      SUZUKI            2016
+16  B 9476 TXV  LJR   CL  ...    PICK UP BOX      SUZUKI            2021
+17  B 9467 TXV  LJR   CL  ...    PICK UP BOX      SUZUKI            2021
+18  B 9316 TXW  LJR   CL  ...       CDE LONG        HINO            2023
+19  B 9447 TXW  LJR   CL  ...    PICK UP BOX      SUZUKI            2023
+20  B 9239 PCP  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+21  B 9241 PCP  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+22  B 9642 PXS  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+23  B 9144 TXV  LJR   CL  ...    PICK UP BOX      SUZUKI            2020
+24  B 9063 TXW  LJR   CL  ...    PICK UP BOX      SUZUKI            2022
+25  B 5616 TWG  LJR   CL  ...  MOTOR LISTRIK      GESITS            2022
+26  B 5751 TWG  LJR   CL  ...  MOTOR LISTRIK      GESITS            2022
+27  B 9490 SYO  LJR   CL  ...    PICK UP BOX      SUZUKI            2017
+28  B 9498 SYO  LJR   CL  ...   CDE STANDART  MITSUBISHI            2017
+29  B 9875 TXV  LJR   CL  ...    PICK UP BOX      SUZUKI            2022
+30  B 9061 TXW  LJR   CL  ...    PICK UP BOX      SUZUKI            2022
+31  B 9169 TXW  LJR   CL  ...   CDE STANDART        HINO            2022
+32  B 9317 TXW  LJR   CL  ...       CDE LONG        HINO            2023
+33  B 5346 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+34  B 5896 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+35  B 5911 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+36  B 5749 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+37  B 9784 PCP  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+38  B 9791 PCP  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+39  B 9605 PXS  LJR   CL  ...       CDD LONG  MITSUBISHI            2020
+40  B 9318 TXW  LJR   CL  ...       CDE LONG        HINO            2023
+41  B 9170 PCM  LJR   CL  ...   CDD STANDART  MITSUBISHI            2017
+42  B 9027 PCN  LJR   CL  ...   CDD STANDART  MITSUBISHI            2017
+43  B 9436 PCO  LJR   CL  ...   CDD STANDART  MITSUBISHI            2018
+44  B 9469 PCO  LJR   CL  ...   CDD STANDART  MITSUBISHI            2018
+45  B 5343 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+46  B 5345 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+47  B 9787 PCP  LJR   CL  ...    PICK UP BOX      SUZUKI            2019
+48  B 5909 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+49  B 5341 TMY  LJR   CL  ...          MOTOR       HONDA            2023
+
+[50 rows x 7 columns]
