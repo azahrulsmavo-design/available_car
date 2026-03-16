@@ -3,3 +3,4 @@ numpy
 streamlit
 openpyxl
 xlsxwriter
+Jinja2
