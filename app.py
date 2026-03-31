@@ -21,7 +21,7 @@ st.set_page_config(page_title="KPI Dashboard Generator", layout="wide")
 st.title("KPI Availability Car Generator")
 st.markdown("Dashboard interaktif untuk mengatur rentang tanggal dan men-generate laporan KPI secara otomatis berdasarkan data Servis Mekanik dan Master Data.")
 
-st.info("Data servis akan otomatis dibaca mundur 1 bulan dari tanggal awal yang Anda pilih agar histori perbaikan mobil lama (belum keluar) tidak terpotong.")
+st.info("Data servis akan otomatis dibaca mundur 1 tahun dari tanggal awal yang Anda pilih agar histori perbaikan mobil lama (belum keluar) tidak terpotong.")
 
 # UI Layout: 3 Columns
 col_date, col_sts, col_master = st.columns(3)
