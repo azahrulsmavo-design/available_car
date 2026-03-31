@@ -8,9 +8,9 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
     start_date = pd.to_datetime(target_start_date_str)
     end_date = pd.to_datetime(target_end_date_str)
     
-    # 1 MONTH LOOKBACK
+    # 1 YEAR LOOKBACK
     # Agar data servis yang belum ditutup bisa terdeteksi
-    fetch_start_date = start_date - pd.DateOffset(months=1)
+    fetch_start_date = start_date - pd.DateOffset(years=1)
     
     # ==========================================
     # 2. LOAD MASTER DATA (Source of Truth)
@@ -124,6 +124,7 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
         
         if status == 'R': return 'R'
         elif 'ASURANSI' in status or 'INSURANCE' in status: return 'B - INS'
+        elif 'STORING HO' in status or 'STORING MKS' in status: return 'B - INT'
         elif 'INTERNAL' in status: return 'AB - INT' if is_same_day else 'B - INT'
         elif 'EKSTERNAL' in status or 'EXTERNAL' in status: return 'AB - EXT' if is_same_day else 'B - EXT'
         else: return 'A'

@@ -7,8 +7,8 @@ def run_etl_raw(target_start_date_str, target_end_date_str, input_file):
     start_date = pd.to_datetime(target_start_date_str)
     end_date = pd.to_datetime(target_end_date_str)
     
-    # 1 MONTH LOOKBACK
-    fetch_start_date = start_date - pd.DateOffset(months=1)
+    # 1 YEAR LOOKBACK
+    fetch_start_date = start_date - pd.DateOffset(years=1)
 
     df_raw = pd.read_csv(input_file, skiprows=3, low_memory=False)
     df_raw.columns = [str(c).replace('\n', ' ').strip() for c in df_raw.columns]
@@ -59,6 +59,7 @@ def run_etl_raw(target_start_date_str, target_end_date_str, input_file):
         
         if status == 'R': return 'R'
         elif 'ASURANSI' in status or 'INSURANCE' in status: return 'B - INS'
+        elif 'STORING HO' in status or 'STORING MKS' in status: return 'B - INT'
         elif 'INTERNAL' in status: return 'AB - INT' if is_same_day else 'B - INT'
         elif 'EKSTERNAL' in status or 'EXTERNAL' in status: return 'AB - EXT' if is_same_day else 'B - EXT'
         else: return 'A'
