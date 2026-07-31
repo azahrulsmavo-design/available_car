@@ -4,6 +4,8 @@ import calendar
 from etl_kpi import run_etl_kpi
 from etl_raw_sts import run_etl_raw
 from etl_ban import run_etl_ban
+from etl_sts import run_etl_sts
+from etl_sparepart import run_etl_sparepart
 import pandas as pd
 import io
 
@@ -19,7 +21,7 @@ DEFAULT_MASTER_FILE = 'data/KPI 95% - Available Car Report - 2026.xlsx'
 st.set_page_config(page_title="KPI & Fleet Dashboard", layout="wide")
 st.title("Aplikasi Laporan Fleet & Analisis Ban")
 
-tab_kpi, tab_ban = st.tabs(["Dashboard KPI & STS", "Analisis Pencapaian KM Ban"])
+tab_kpi, tab_ban, tab_sts, tab_sparepart = st.tabs(["Dashboard KPI & STS", "Analisis Pencapaian KM Ban", "Capaian KM STS", "ETL Sparepart"])
 
 # =======================
 # TAB 1: KPI & STS
@@ -153,12 +155,16 @@ with tab_kpi:
             return ''
         
         df_to_show = dfs_preview[selected_sheet]
-        try:
-            styled_df = df_to_show.style.map(color_status)
-        except AttributeError:
-            styled_df = df_to_show.style.applymap(color_status)
         
-        st.dataframe(styled_df, width='stretch', hide_index=True)
+        if selected_sheet == 'SUMMARY_USIA':
+            st.dataframe(df_to_show, width='stretch', hide_index=True)
+        else:
+            try:
+                styled_df = df_to_show.style.map(color_status)
+            except AttributeError:
+                styled_df = df_to_show.style.applymap(color_status)
+            
+            st.dataframe(styled_df, width='stretch', hide_index=True)
 
 
 # =======================
@@ -167,7 +173,13 @@ with tab_kpi:
 with tab_ban:
     st.markdown("Dashboard untuk menganalisis pencapaian KM Ban menggunakan data **BAN SHARE - Entry Data**. Upload file dengan baris ke-7 sebagai header utama.")
     
-    ban_file = st.file_uploader("Upload File BAN SHARE (Excel .xlsx)", type=['xlsx', 'xls'], key='upload_ban')
+    ban_col1, ban_col2 = st.columns(2)
+    with ban_col1:
+        ban_start_date = st.date_input("Tanggal Awal (Pelepasan)", datetime.date.today().replace(day=1), key="ban_start")
+    with ban_col2:
+        ban_end_date = st.date_input("Tanggal Akhir (Pelepasan)", datetime.date.today(), key="ban_end")
+
+    ban_file = st.file_uploader("Upload File BAN SHARE (Excel / CSV)", type=['xlsx', 'xls', 'csv'], key='upload_ban')
     
     if 'bytes_ban' not in st.session_state:
         st.session_state.bytes_ban = None
@@ -179,7 +191,7 @@ with tab_ban:
         else:
             with st.spinner("Memproses Analisis Ban..."):
                 try:
-                    bytes_b, df_b = run_etl_ban(ban_file.getvalue())
+                    bytes_b, df_b = run_etl_ban(ban_file.getvalue(), filename=ban_file.name, start_date=ban_start_date, end_date=ban_end_date)
                     st.session_state.bytes_ban = bytes_b
                     st.session_state.df_ban = df_b
                     st.success("Laporan Analisis Ban berhasil dibuat.")
@@ -191,7 +203,7 @@ with tab_ban:
     if st.session_state.bytes_ban is not None:
         st.markdown("---")
         st.download_button(
-            label="Download Laporan Analisis Ban",
+            label="Download Laporan Analisis Ban (Excel)",
             data=st.session_state.bytes_ban,
             file_name="Laporan_Analisis_KM_Ban.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -200,4 +212,100 @@ with tab_ban:
         )
         
         st.subheader("Preview Jarak Tempuh per Ban")
-        st.dataframe(st.session_state.df_ban, use_container_width=True, hide_index=True)
+        st.dataframe(st.session_state.df_ban, width='stretch', hide_index=True)
+
+
+# =======================
+# TAB 3: CAPAIAN KM STS
+# =======================
+with tab_sts:
+    st.markdown("Dashboard untuk menganalisis total pencapaian KM per Nopol berdasarkan file **STSFORM** pada rentang waktu tertentu.")
+    
+    sts_col1, sts_col2 = st.columns(2)
+    with sts_col1:
+        sts_start_date = st.date_input("Tanggal Awal", datetime.date.today().replace(day=1), key="sts_start")
+    with sts_col2:
+        sts_end_date = st.date_input("Tanggal Akhir", datetime.date.today(), key="sts_end")
+        
+    sts_file = st.file_uploader("Upload File STSFORM (Excel / CSV)", type=['xlsx', 'xls', 'csv'], key='upload_sts_km')
+    
+    if 'bytes_sts_km' not in st.session_state:
+        st.session_state.bytes_sts_km = None
+        st.session_state.df_sts_km = None
+        
+    if st.button("Generate Analisis Capaian KM STS", type="primary", key="btn_sts_run", width="stretch"):
+        if sts_file is None:
+            st.error("Silakan upload file STSFORM terlebih dahulu.")
+        else:
+            with st.spinner("Memproses Data STS..."):
+                try:
+                    bytes_s, df_s = run_etl_sts(sts_file.getvalue(), filename=sts_file.name, start_date=sts_start_date, end_date=sts_end_date)
+                    st.session_state.bytes_sts_km = bytes_s
+                    st.session_state.df_sts_km = df_s
+                    st.success("Laporan Capaian KM STS berhasil dibuat.")
+                except Exception as e:
+                    import traceback
+                    st.error(f"Terjadi kesalahan saat memproses STS: {e}")
+                    st.code(traceback.format_exc())
+                    
+    if st.session_state.bytes_sts_km is not None:
+        st.markdown("---")
+        st.download_button(
+            label="Download Laporan Capaian KM STS (Excel)",
+            data=st.session_state.bytes_sts_km,
+            file_name="Laporan_Capaian_KM_STS.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            width='stretch',
+            key='dl_sts_km'
+        )
+        
+        st.subheader("Preview Jarak Tempuh per Nopol")
+        st.dataframe(st.session_state.df_sts_km, width='stretch', hide_index=True)
+
+
+# =======================
+# TAB 4: ETL SPAREPART
+# =======================
+with tab_sparepart:
+    st.markdown("Dashboard untuk menganalisis jumlah pemakaian sparepart dan total harga.")
+    
+    sp_col1, sp_col2 = st.columns(2)
+    with sp_col1:
+        sp_start_date = st.date_input("Tanggal Awal (RF)", datetime.date.today().replace(day=1), key="sp_start")
+    with sp_col2:
+        sp_end_date = st.date_input("Tanggal Akhir (RF)", datetime.date.today(), key="sp_end")
+        
+    sp_file = st.file_uploader("Upload File Sparepart (Excel / CSV)", type=['xlsx', 'xls', 'csv'], key='upload_sp')
+    
+    if 'bytes_sp' not in st.session_state:
+        st.session_state.bytes_sp = None
+        st.session_state.df_sp = None
+        
+    if st.button("Generate Analisis Sparepart", type="primary", key="btn_sp_run", width="stretch"):
+        if sp_file is None:
+            st.error("Silakan upload file Sparepart terlebih dahulu.")
+        else:
+            with st.spinner("Memproses Data Sparepart..."):
+                try:
+                    bytes_s, df_s = run_etl_sparepart(sp_file.getvalue(), filename=sp_file.name, start_date=sp_start_date, end_date=sp_end_date)
+                    st.session_state.bytes_sp = bytes_s
+                    st.session_state.df_sp = df_s
+                    st.success("Laporan Sparepart berhasil dibuat.")
+                except Exception as e:
+                    import traceback
+                    st.error(f"Terjadi kesalahan saat memproses Sparepart: {e}")
+                    st.code(traceback.format_exc())
+                    
+    if st.session_state.bytes_sp is not None:
+        st.markdown("---")
+        st.download_button(
+            label="Download Laporan Sparepart (Excel)",
+            data=st.session_state.bytes_sp,
+            file_name="Laporan_ETL_Sparepart.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            width='stretch',
+            key='dl_sp'
+        )
+        
+        st.subheader("Preview Data Sparepart")
+        st.dataframe(st.session_state.df_sp, width='stretch', hide_index=True)
