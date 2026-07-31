@@ -414,6 +414,62 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
                 
             pivot_unv.to_excel(writer, sheet_name='TDK_AVAILABLE_AKHIR', index=False)
             
+        # ==========================================
+        # 11. SHEET SUMMARY USIA
+        # ==========================================
+        import re
+        def get_kategori_usia(val):
+            try:
+                val_str = str(val).replace(',', '.')
+                nums = re.findall(r"[-+]?\d*\.\d+|\d+", val_str)
+                if nums:
+                    u = float(nums[0])
+                    if u <= 5: return '0-5 Tahun'
+                    elif u <= 10: return '6-10 Tahun'
+                    elif u <= 15: return '11-15 Tahun'
+                    else: return '16 Tahun Lebih'
+                return 'Tidak Diketahui'
+            except:
+                return 'Tidak Diketahui'
+                
+        df_usia = df_final.drop_duplicates(subset=['NOPOL', 'DATE']).copy()
+        df_usia['KATEGORI_USIA'] = df_usia['USIA'].apply(get_kategori_usia)
+        
+        total_cars_df = df_usia.groupby('KATEGORI_USIA')['NOPOL'].nunique().reset_index(name='Total Kendaraan')
+        
+        df_usia_work = df_usia[df_usia['DATE'].dt.dayofweek != 6]
+        
+        if not df_usia_work.empty:
+            status_counts = df_usia_work.groupby(['KATEGORI_USIA', 'STATUS_CODE']).size().unstack(fill_value=0)
+        else:
+            status_counts = pd.DataFrame(columns=status_list)
+            
+        for s in status_list:
+            if s not in status_counts.columns:
+                status_counts[s] = 0
+                
+        summary_usia = pd.merge(total_cars_df, status_counts.reset_index(), on='KATEGORI_USIA', how='left')
+        summary_usia.fillna(0, inplace=True)
+        
+        cat_order = {'0-5 Tahun': 1, '6-10 Tahun': 2, '11-15 Tahun': 3, '16 Tahun Lebih': 4, 'Tidak Diketahui': 5}
+        summary_usia['Order'] = summary_usia['KATEGORI_USIA'].map(cat_order)
+        summary_usia = summary_usia.sort_values('Order').drop(columns=['Order'])
+        
+        summary_usia['Total Hari Kerja'] = summary_usia['Total Kendaraan'] * total_work_days
+        
+        out_cols = ['KATEGORI_USIA', 'Total Kendaraan', 'Total Hari Kerja']
+        for s in status_list:
+            t_col = f'TOTAL {s}'
+            p_col = f'% {s}'
+            summary_usia[t_col] = summary_usia[s]
+            summary_usia[p_col] = summary_usia.apply(
+                lambda row: f"{(row[t_col] / row['Total Hari Kerja']):.2%}" if row['Total Hari Kerja'] > 0 else "0.00%", axis=1
+            )
+            out_cols.extend([t_col, p_col])
+            
+        summary_usia = summary_usia[out_cols]
+        summary_usia.to_excel(writer, sheet_name='SUMMARY_USIA', index=False)
+            
     return output.getvalue()
 
 if __name__ == '__main__':
