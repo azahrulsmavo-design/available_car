@@ -157,7 +157,14 @@ with tab_kpi:
         df_to_show = dfs_preview[selected_sheet]
         
         if selected_sheet == 'SUMMARY_USIA':
-            st.dataframe(df_to_show, width='stretch', hide_index=True)
+            if 'JENIS_KENDARAAN' in df_to_show.columns:
+                tab_mobil, tab_motor = st.tabs(["🚗 MOBIL", "🏍️ MOTOR"])
+                with tab_mobil:
+                    st.dataframe(df_to_show[df_to_show['JENIS_KENDARAAN'] == 'MOBIL'].drop(columns=['JENIS_KENDARAAN']), width='stretch', hide_index=True)
+                with tab_motor:
+                    st.dataframe(df_to_show[df_to_show['JENIS_KENDARAAN'] == 'MOTOR'].drop(columns=['JENIS_KENDARAAN']), width='stretch', hide_index=True)
+            else:
+                st.dataframe(df_to_show, width='stretch', hide_index=True)
         else:
             try:
                 styled_df = df_to_show.style.map(color_status)

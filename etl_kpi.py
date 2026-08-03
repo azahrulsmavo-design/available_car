@@ -84,6 +84,58 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
     for col in ['NOPOL', 'BU', 'DEPT', 'LOKASI', 'JENIS_MOBIL', 'MERK']:
         if col in df_master.columns:
             df_master[col] = df_master[col].astype(str).str.strip().str.upper()
+            
+    # Calculate more precise USIA based on TAHUN_PEMBUATAN
+    current_year = datetime.now().year
+    def calculate_precise_usia(row):
+        try:
+            thn = str(row['TAHUN_PEMBUATAN']).strip()
+            import re
+            nums = re.findall(r"20\d{2}|19\d{2}", thn)
+            if nums:
+                return max(0, current_year - int(nums[0]))
+            
+            usia_val = str(row['USIA']).replace(',', '.')
+            nums2 = re.findall(r"[-+]?\d*\.\d+|\d+", usia_val)
+            if nums2:
+                return float(nums2[0])
+            return row['USIA']
+        except:
+            return row['USIA']
+            
+    df_master['USIA'] = df_master.apply(calculate_precise_usia, axis=1)
+    
+    # Mapping USIA from Master Usia.xlsx for missing values
+    try:
+        import os
+        import re
+        master_usia_path = 'Master Usia.xlsx'
+        if not os.path.exists(master_usia_path):
+            master_usia_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Master Usia.xlsx')
+            
+        if os.path.exists(master_usia_path):
+            df_mu = pd.read_excel(master_usia_path, sheet_name='Sheet10')
+            df_mu['NOPOL'] = df_mu['NOPOL'].astype(str).str.strip().str.upper()
+            dict_usia = {}
+            for _, r in df_mu.iterrows():
+                try:
+                    val = str(r['USIA']).replace(',', '.')
+                    nums_mu = re.findall(r"[-+]?\d*\.\d+|\d+", val)
+                    if nums_mu:
+                        nopol_clean = str(r['NOPOL']).replace(' ', '')
+                        dict_usia[nopol_clean] = float(nums_mu[0])
+                except:
+                    pass
+            
+            def final_usia_mapping(row):
+                val = row['USIA']
+                nopol_clean = str(row['NOPOL']).replace(' ', '')
+                if pd.isna(val) or val == '-' or val == 'Tidak Diketahui' or str(val).strip() == '':
+                    return dict_usia.get(nopol_clean, val)
+                return val
+            df_master['USIA'] = df_master.apply(final_usia_mapping, axis=1)
+    except Exception as e:
+        pass
     
     # ==========================================
     # 3. EKSTRAKSI & PEMBERSIHAN DATA SERVIS (CSV)
@@ -433,14 +485,43 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
                 return 'Tidak Diketahui'
                 
         df_usia = df_final.drop_duplicates(subset=['NOPOL', 'DATE']).copy()
+        
+        try:
+            import os, re
+            mu_path = 'Master Usia.xlsx'
+            if not os.path.exists(mu_path):
+                mu_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Master Usia.xlsx')
+            if os.path.exists(mu_path):
+                df_mu_tmp = pd.read_excel(mu_path, sheet_name='Sheet10')
+                dict_mu = {}
+                for _, r in df_mu_tmp.iterrows():
+                    val = str(r['USIA']).replace(',', '.')
+                    nums = re.findall(r"[-+]?\d*\.\d+|\d+", val)
+                    if nums:
+                        dict_mu[str(r['NOPOL']).replace(' ', '').upper()] = float(nums[0])
+                
+                def fill_usia(row):
+                    val = row['USIA']
+                    if pd.isna(val) or val == '-' or val == 'Tidak Diketahui' or str(val).strip() == '':
+                        return dict_mu.get(str(row['NOPOL']).replace(' ', '').upper(), val)
+                    return val
+                df_usia['USIA'] = df_usia.apply(fill_usia, axis=1)
+        except Exception:
+            pass
+            
         df_usia['KATEGORI_USIA'] = df_usia['USIA'].apply(get_kategori_usia)
         
-        total_cars_df = df_usia.groupby('KATEGORI_USIA')['NOPOL'].nunique().reset_index(name='Total Kendaraan')
+        def get_jenis_kendaraan(val):
+            return 'MOTOR' if str(val).strip().upper() == 'MOTOR' else 'MOBIL'
+            
+        df_usia['JENIS_KENDARAAN'] = df_usia['JENIS_MOBIL'].apply(get_jenis_kendaraan)
+        
+        total_cars_df = df_usia.groupby(['JENIS_KENDARAAN', 'KATEGORI_USIA'])['NOPOL'].nunique().reset_index(name='Total Kendaraan')
         
         df_usia_work = df_usia[df_usia['DATE'].dt.dayofweek != 6]
         
         if not df_usia_work.empty:
-            status_counts = df_usia_work.groupby(['KATEGORI_USIA', 'STATUS_CODE']).size().unstack(fill_value=0)
+            status_counts = df_usia_work.groupby(['JENIS_KENDARAAN', 'KATEGORI_USIA', 'STATUS_CODE']).size().unstack(fill_value=0)
         else:
             status_counts = pd.DataFrame(columns=status_list)
             
@@ -448,16 +529,16 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             if s not in status_counts.columns:
                 status_counts[s] = 0
                 
-        summary_usia = pd.merge(total_cars_df, status_counts.reset_index(), on='KATEGORI_USIA', how='left')
+        summary_usia = pd.merge(total_cars_df, status_counts.reset_index(), on=['JENIS_KENDARAAN', 'KATEGORI_USIA'], how='left')
         summary_usia.fillna(0, inplace=True)
         
         cat_order = {'0-5 Tahun': 1, '6-10 Tahun': 2, '11-15 Tahun': 3, '16 Tahun Lebih': 4, 'Tidak Diketahui': 5}
         summary_usia['Order'] = summary_usia['KATEGORI_USIA'].map(cat_order)
-        summary_usia = summary_usia.sort_values('Order').drop(columns=['Order'])
+        summary_usia = summary_usia.sort_values(['JENIS_KENDARAAN', 'Order']).drop(columns=['Order'])
         
         summary_usia['Total Hari Kerja'] = summary_usia['Total Kendaraan'] * total_work_days
         
-        out_cols = ['KATEGORI_USIA', 'Total Kendaraan', 'Total Hari Kerja']
+        out_cols = ['JENIS_KENDARAAN', 'KATEGORI_USIA', 'Total Kendaraan', 'Total Hari Kerja']
         for s in status_list:
             t_col = f'TOTAL {s}'
             p_col = f'% {s}'
