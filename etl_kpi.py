@@ -351,6 +351,12 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
         inv_df = df_final.groupby('NOPOL')['STATUS_CODE'].nunique().reset_index()
         inv_nopols = inv_df[inv_df['STATUS_CODE'] == 1]['NOPOL']
         
+        # Build global order_dict for consistent sorting
+        all_orders = []
+        for lst in CUSTOM_NOPOL_ORDER.values():
+            all_orders.extend(lst)
+        global_order_dict = {nopol.replace(' ', '').upper(): i for i, nopol in enumerate(all_orders)}
+        
         df_investigasi = df_final[df_final['NOPOL'].isin(inv_nopols)]
         if not df_investigasi.empty:
             pivot_inv = df_investigasi.pivot_table(
@@ -363,12 +369,8 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             
             # Sort menggunakan urutan global dari custom order
             pivot_inv['_CLEAN_NOPOL'] = pivot_inv['NOPOL'].astype(str).str.replace(' ', '').str.upper()
-            all_orders = []
-            for lst in CUSTOM_NOPOL_ORDER.values():
-                all_orders.extend(lst)
-            order_dict = {nopol.replace(' ', '').upper(): i for i, nopol in enumerate(all_orders)}
             
-            pivot_inv['CUSTOM_ORDER'] = pivot_inv['_CLEAN_NOPOL'].map(lambda x: order_dict.get(x, 999999))
+            pivot_inv['CUSTOM_ORDER'] = pivot_inv['_CLEAN_NOPOL'].map(lambda x: global_order_dict.get(x, 999999))
             pivot_inv = pivot_inv.sort_values(['CUSTOM_ORDER', 'NOPOL'])
             pivot_inv = pivot_inv.drop(columns=['CUSTOM_ORDER', '_CLEAN_NOPOL'])
             
@@ -405,7 +407,7 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
                 pivot_nona = pd.merge(pivot_nona, early_start, on='_CLEAN_NOPOL', how='left')
                 pivot_nona['EARLY_START'] = pivot_nona['EARLY_START'].dt.strftime('%d/%m/%Y').fillna('-')
                 
-                pivot_nona['CUSTOM_ORDER'] = pivot_nona['_CLEAN_NOPOL'].map(lambda x: order_dict.get(x, 999999))
+                pivot_nona['CUSTOM_ORDER'] = pivot_nona['_CLEAN_NOPOL'].map(lambda x: global_order_dict.get(x, 999999))
                 pivot_nona = pivot_nona.sort_values(['CUSTOM_ORDER', 'NOPOL'])
                 pivot_nona = pivot_nona.drop(columns=['CUSTOM_ORDER', '_CLEAN_NOPOL'])
                 
@@ -452,7 +454,7 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             
             # Sort menggunakan urutan global dari custom order
             pivot_unv['_CLEAN_NOPOL'] = pivot_unv['NOPOL'].astype(str).str.replace(' ', '').str.upper()
-            pivot_unv['CUSTOM_ORDER'] = pivot_unv['_CLEAN_NOPOL'].map(lambda x: order_dict.get(x, 999999))
+            pivot_unv['CUSTOM_ORDER'] = pivot_unv['_CLEAN_NOPOL'].map(lambda x: global_order_dict.get(x, 999999))
             pivot_unv = pivot_unv.sort_values(['CUSTOM_ORDER', 'NOPOL'])
             pivot_unv = pivot_unv.drop(columns=['CUSTOM_ORDER', '_CLEAN_NOPOL'])
             
@@ -467,7 +469,36 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             pivot_unv.to_excel(writer, sheet_name='TDK_AVAILABLE_AKHIR', index=False)
             
         # ==========================================
-        # 11. SHEET SUMMARY USIA
+        # 11. SHEET SUMMARY ALL NOPOL
+        # ==========================================
+        df_all_nopol = df_final.drop_duplicates(subset=['NOPOL', 'DATE'])
+        
+        if not df_all_nopol.empty:
+            pivot_all = df_all_nopol.pivot_table(
+                index=identity_cols,
+                columns='DATE',
+                values='STATUS_CODE',
+                aggfunc='first'
+            )
+            pivot_all = pivot_all.reset_index()
+            
+            pivot_all['_CLEAN_NOPOL'] = pivot_all['NOPOL'].astype(str).str.replace(' ', '').str.upper()
+            pivot_all['CUSTOM_ORDER'] = pivot_all['_CLEAN_NOPOL'].map(lambda x: global_order_dict.get(x, 999999))
+            pivot_all = pivot_all.sort_values(['CUSTOM_ORDER', 'NOPOL'])
+            pivot_all = pivot_all.drop(columns=['CUSTOM_ORDER', '_CLEAN_NOPOL'])
+            
+            pivot_all = pivot_all.set_index(identity_cols)
+            pivot_all = pivot_all.reset_index()
+            pivot_all.columns = identity_cols + date_cols_str
+            
+            for s in status_list:
+                pivot_all[f'TOTAL {s}'] = (pivot_all[date_cols_str] == s).sum(axis=1)
+                pivot_all[f'% {s}'] = (pivot_all[f'TOTAL {s}'] / total_days).map(lambda x: f"{x:.2%}")
+                
+            pivot_all.to_excel(writer, sheet_name='SUMMARY_ALL_NOPOL', index=False)
+            
+        # ==========================================
+        # 12. SHEET SUMMARY USIA
         # ==========================================
         import re
         def get_kategori_usia(val):
