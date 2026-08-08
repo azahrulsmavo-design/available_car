@@ -339,9 +339,13 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             
             status_list = ['A', 'AB - INT', 'AB - EXT', 'B - INT', 'B - EXT', 'B - INS', 'R']
             total_days = total_work_days
+            date_cols = pivot_df.columns[len(identity_cols):len(identity_cols)+len(date_cols_str)]
             for s in status_list:
-                pivot_df[f'TOTAL {s}'] = (pivot_df[date_cols_str] == s).sum(axis=1)
+                pivot_df[f'TOTAL {s}'] = (pivot_df[date_cols] == s).sum(axis=1)
                 pivot_df[f'% {s}'] = (pivot_df[f'TOTAL {s}'] / total_days).map(lambda x: f"{x:.2%}")
+                
+            pivot_df['TOTAL (A+AB)'] = pivot_df['TOTAL A'] + pivot_df['TOTAL AB - INT'] + pivot_df['TOTAL AB - EXT']
+            pivot_df['% (A+AB)'] = (pivot_df['TOTAL (A+AB)'] / total_days).map(lambda x: f"{x:.2%}")
                 
             pivot_df.to_excel(writer, sheet_name=sheet, index=False)
             
@@ -380,9 +384,13 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             
             status_list = ['A', 'AB - INT', 'AB - EXT', 'B - INT', 'B - EXT', 'B - INS', 'R']
             total_days = total_work_days
+            date_cols = pivot_inv.columns[len(identity_cols):len(identity_cols)+len(date_cols_str)]
             for s in status_list:
-                pivot_inv[f'TOTAL {s}'] = (pivot_inv[date_cols_str] == s).sum(axis=1)
+                pivot_inv[f'TOTAL {s}'] = (pivot_inv[date_cols] == s).sum(axis=1)
                 pivot_inv[f'% {s}'] = (pivot_inv[f'TOTAL {s}'] / total_days).map(lambda x: f"{x:.2%}")
+                
+            pivot_inv['TOTAL (A+AB)'] = pivot_inv['TOTAL A'] + pivot_inv['TOTAL AB - INT'] + pivot_inv['TOTAL AB - EXT']
+            pivot_inv['% (A+AB)'] = (pivot_inv['TOTAL (A+AB)'] / total_days).map(lambda x: f"{x:.2%}")
                 
             pivot_inv.to_excel(writer, sheet_name='INVESTIGASI', index=False)
             
@@ -425,9 +433,13 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
                 pivot_nona_dates = pivot_nona.columns[len(identity_cols)+1:]
                 
                 # Kalkulasi total & persentase
+                date_cols = pivot_nona.columns[len(identity_cols)+1:len(identity_cols)+1+len(date_cols_str)]
                 for s in status_list:
-                    pivot_nona[f'TOTAL {s}'] = (pivot_nona[pivot_nona_dates] == s).sum(axis=1)
+                    pivot_nona[f'TOTAL {s}'] = (pivot_nona[date_cols] == s).sum(axis=1)
                     pivot_nona[f'% {s}'] = (pivot_nona[f'TOTAL {s}'] / total_days).map(lambda x: f"{x:.2%}")
+                    
+                pivot_nona['TOTAL (A+AB)'] = pivot_nona['TOTAL A'] + pivot_nona['TOTAL AB - INT'] + pivot_nona['TOTAL AB - EXT']
+                pivot_nona['% (A+AB)'] = (pivot_nona['TOTAL (A+AB)'] / total_days).map(lambda x: f"{x:.2%}")
                 
                 # Ubah nama kolom date (datetime -> string)
                 date_rename_map = {d: f"{d.day}/{d.month}" for d in date_range if d in pivot_nona.columns}
@@ -462,9 +474,13 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             pivot_unv = pivot_unv.reset_index()
             pivot_unv.columns = identity_cols + date_cols_str
             
+            date_cols = pivot_unv.columns[len(identity_cols):len(identity_cols)+len(date_cols_str)]
             for s in status_list:
-                pivot_unv[f'TOTAL {s}'] = (pivot_unv[date_cols_str] == s).sum(axis=1)
+                pivot_unv[f'TOTAL {s}'] = (pivot_unv[date_cols] == s).sum(axis=1)
                 pivot_unv[f'% {s}'] = (pivot_unv[f'TOTAL {s}'] / total_days).map(lambda x: f"{x:.2%}")
+                
+            pivot_unv['TOTAL (A+AB)'] = pivot_unv['TOTAL A'] + pivot_unv['TOTAL AB - INT'] + pivot_unv['TOTAL AB - EXT']
+            pivot_unv['% (A+AB)'] = (pivot_unv['TOTAL (A+AB)'] / total_days).map(lambda x: f"{x:.2%}")
                 
             pivot_unv.to_excel(writer, sheet_name='TDK_AVAILABLE_AKHIR', index=False)
             
@@ -491,9 +507,13 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
             pivot_all = pivot_all.reset_index()
             pivot_all.columns = identity_cols + date_cols_str
             
+            date_cols = pivot_all.columns[len(identity_cols):len(identity_cols)+len(date_cols_str)]
             for s in status_list:
-                pivot_all[f'TOTAL {s}'] = (pivot_all[date_cols_str] == s).sum(axis=1)
+                pivot_all[f'TOTAL {s}'] = (pivot_all[date_cols] == s).sum(axis=1)
                 pivot_all[f'% {s}'] = (pivot_all[f'TOTAL {s}'] / total_days).map(lambda x: f"{x:.2%}")
+                
+            pivot_all['TOTAL (A+AB)'] = pivot_all['TOTAL A'] + pivot_all['TOTAL AB - INT'] + pivot_all['TOTAL AB - EXT']
+            pivot_all['% (A+AB)'] = (pivot_all['TOTAL (A+AB)'] / total_days).map(lambda x: f"{x:.2%}")
                 
             pivot_all.to_excel(writer, sheet_name='SUMMARY_ALL_NOPOL', index=False)
             
@@ -578,6 +598,12 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
                 lambda row: f"{(row[t_col] / row['Total Hari Kerja']):.2%}" if row['Total Hari Kerja'] > 0 else "0.00%", axis=1
             )
             out_cols.extend([t_col, p_col])
+            
+        summary_usia['TOTAL (A+AB)'] = summary_usia['TOTAL A'] + summary_usia['TOTAL AB - INT'] + summary_usia['TOTAL AB - EXT']
+        summary_usia['% (A+AB)'] = summary_usia.apply(
+            lambda row: f"{(row['TOTAL (A+AB)'] / row['Total Hari Kerja']):.2%}" if row['Total Hari Kerja'] > 0 else "0.00%", axis=1
+        )
+        out_cols.extend(['TOTAL (A+AB)', '% (A+AB)'])
             
         summary_usia = summary_usia[out_cols]
         summary_usia.to_excel(writer, sheet_name='SUMMARY_USIA', index=False)
