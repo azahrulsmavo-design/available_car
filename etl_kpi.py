@@ -156,6 +156,16 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
     df_servis['NOPOL'] = df_servis['NOPOL'].astype(str).str.strip().str.upper()
     df_servis['STATUS_BENGKEL'] = df_servis['STATUS_BENGKEL'].astype(str).str.strip().str.upper()
     
+    # Preprocess TGL_KELUAR to handle time-only strings (e.g., '9:15') by assuming it's the same day as TGL_MASUK
+    def preprocess_tgl_keluar(row):
+        tgl_k = str(row['TGL_KELUAR']).strip()
+        if pd.notna(row['TGL_KELUAR']) and tgl_k != 'nan' and tgl_k != 'NaT' and tgl_k != 'None' and tgl_k != '':
+            if ':' in tgl_k and '/' not in tgl_k and '-' not in tgl_k:
+                return row['TGL_MASUK']
+        return row['TGL_KELUAR']
+
+    df_servis['TGL_KELUAR'] = df_servis.apply(preprocess_tgl_keluar, axis=1)
+
     df_servis['TGL_MASUK'] = pd.to_datetime(df_servis['TGL_MASUK'], errors='coerce', format='mixed', dayfirst=True)
     df_servis['TGL_KELUAR'] = pd.to_datetime(df_servis['TGL_KELUAR'], errors='coerce', format='mixed', dayfirst=True)
     df_servis = df_servis.dropna(subset=['NOPOL', 'TGL_MASUK'])
