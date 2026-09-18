@@ -1,6 +1,20 @@
 import streamlit as st
 import datetime
 import calendar
+import importlib
+import etl_kpi
+import etl_raw_sts
+import etl_ban
+import etl_sts
+import etl_sparepart
+
+# Reload modul ETL agar Streamlit selalu menggunakan versi kode terbaru
+importlib.reload(etl_kpi)
+importlib.reload(etl_raw_sts)
+importlib.reload(etl_ban)
+importlib.reload(etl_sts)
+importlib.reload(etl_sparepart)
+
 from etl_kpi import run_etl_kpi
 from etl_raw_sts import run_etl_raw
 from etl_ban import run_etl_ban
