@@ -10,28 +10,69 @@ def run_etl_raw(target_start_date_str, target_end_date_str, input_file):
     # 1 YEAR LOOKBACK
     fetch_start_date = start_date - pd.DateOffset(years=1)
 
-    df_raw = pd.read_csv(input_file, skiprows=3, low_memory=False)
+    # ==========================================
+    # 2. EKSTRAKSI & PEMBERSIHAN DATA RAW (CSV / EXCEL)
+    # ==========================================
+    is_excel = False
+    if isinstance(input_file, str) and (input_file.endswith('.xlsx') or input_file.endswith('.xls')):
+        is_excel = True
+        
+    df_raw = None
+    for skip in [0, 1, 2, 3, 4, 5, 17, 18]:
+        try:
+            if is_excel:
+                temp_df = pd.read_excel(input_file, skiprows=skip, nrows=5)
+            else:
+                temp_df = pd.read_csv(input_file, skiprows=skip, nrows=5, low_memory=False)
+            cols_check = [str(c).replace('\n', ' ').strip().upper() for c in temp_df.columns]
+            if any('NOPOL' in c for c in cols_check) or (any('STATUS' in c for c in cols_check) and any('MASUK' in c for c in cols_check)):
+                if is_excel:
+                    df_raw = pd.read_excel(input_file, skiprows=skip)
+                else:
+                    df_raw = pd.read_csv(input_file, skiprows=skip, low_memory=False)
+                break
+        except Exception:
+            continue
+
+    if df_raw is None:
+        if is_excel:
+            df_raw = pd.read_excel(input_file)
+        else:
+            df_raw = pd.read_csv(input_file, low_memory=False)
+
     df_raw.columns = [str(c).replace('\n', ' ').strip() for c in df_raw.columns]
 
-    # ==========================================
-    # 2. EKSTRAKSI DATA
-    # ==========================================
-    cols_to_keep = {
-        'BU MASTER': 'BU',
-        'DEPT': 'DEPT',
-        'CABANG MASTER': 'LOKASI',
-        'JENIS KENDARAAN': 'JENIS_MOBIL',
-        'MEREK KENDARAAN': 'MERK',
-        'NOPOL': 'NOPOL',
-        'USIA KENDARAAN': 'USIA',
-        'STATUS BENGKEL': 'STATUS_BENGKEL',
-        'TGL MASUK BENGKEL': 'TGL_MASUK',
-        'TGLKELUAR BENGKEL': 'TGL_KELUAR'
-    }
+    # Map target columns flexibly
+    col_mapping = {}
+    for c in df_raw.columns:
+        c_clean = str(c).upper().replace('\n', ' ').replace('_', ' ').strip()
+        if 'BU' not in col_mapping.values() and ('BU MASTER' in c_clean or c_clean == 'BU'):
+            col_mapping[c] = 'BU'
+        elif 'DEPT' not in col_mapping.values() and ('DEPT' in c_clean or 'DEPARTMENT' in c_clean or 'SECTION' in c_clean):
+            col_mapping[c] = 'DEPT'
+        elif 'LOKASI' not in col_mapping.values() and ('CABANG MASTER' in c_clean or 'LOKASI' in c_clean or 'LOCATION' in c_clean):
+            col_mapping[c] = 'LOKASI'
+        elif 'JENIS_MOBIL' not in col_mapping.values() and ('JENIS KENDARAAN' in c_clean or 'JENIS MOBIL' in c_clean):
+            col_mapping[c] = 'JENIS_MOBIL'
+        elif 'MERK' not in col_mapping.values() and ('MEREK KENDARAAN' in c_clean or 'MERK' in c_clean or 'MEREK' in c_clean):
+            col_mapping[c] = 'MERK'
+        elif 'NOPOL' not in col_mapping.values() and ('NOPOL' in c_clean or 'NO POL' in c_clean or 'POLISI' in c_clean):
+            col_mapping[c] = 'NOPOL'
+        elif 'USIA' not in col_mapping.values() and ('USIA KENDARAAN' in c_clean or 'USIA' in c_clean):
+            col_mapping[c] = 'USIA'
+        elif 'STATUS_BENGKEL' not in col_mapping.values() and ('STATUS BENGKEL' in c_clean or 'STATUS_BENGKEL' in c_clean or c_clean == 'STATUS'):
+            col_mapping[c] = 'STATUS_BENGKEL'
+        elif 'TGL_MASUK' not in col_mapping.values() and ('TGL MASUK' in c_clean or 'TANGGAL MASUK' in c_clean or 'MASUK BENGKEL' in c_clean):
+            col_mapping[c] = 'TGL_MASUK'
+        elif 'TGL_KELUAR' not in col_mapping.values() and ('TGLKELUAR' in c_clean or 'TGL KELUAR' in c_clean or 'TANGGAL KELUAR' in c_clean or 'KELUAR BENGKEL' in c_clean):
+            col_mapping[c] = 'TGL_KELUAR'
 
-    available_cols = [c for c in cols_to_keep.keys() if c in df_raw.columns]
-    df = df_raw[available_cols].copy()
-    df.rename(columns=cols_to_keep, inplace=True)
+    df = df_raw[list(col_mapping.keys())].copy()
+    df.rename(columns=col_mapping, inplace=True)
+
+    for req in ['BU', 'DEPT', 'LOKASI', 'JENIS_MOBIL', 'MERK', 'NOPOL', 'USIA', 'STATUS_BENGKEL', 'TGL_MASUK', 'TGL_KELUAR']:
+        if req not in df.columns:
+            df[req] = np.nan
 
     # Clean Text
     text_cols = ['BU', 'DEPT', 'LOKASI', 'JENIS_MOBIL', 'MERK', 'NOPOL', 'STATUS_BENGKEL']

@@ -47,12 +47,12 @@ with tab_kpi:
 
     with col_sts:
         st.subheader("Data Servis (STS)")
-        custom_file = st.file_uploader("Upload MEKANIK - STSFORM.csv terbaru (Opsional)", type=['csv'], key='sts_upload')
+        custom_file = st.file_uploader("Upload MEKANIK - STSFORM terbaru (Opsional)", type=['csv', 'xlsx', 'xls'], key='sts_upload')
         st.caption("Jika dikosongkan, sistem akan menggunakan data default di server.")
 
     with col_master:
         st.subheader("Data Master Identitas")
-        custom_master = st.file_uploader("Upload Data Master Identitas (Opsional)", type=['csv', 'xlsx'], key='master_upload')
+        custom_master = st.file_uploader("Upload Data Master Identitas (Opsional)", type=['csv', 'xlsx', 'xls'], key='master_upload')
         st.caption("Gunakan file Master Aset Kendaraan Baru untuk sinkronisasi identitas.")
 
     st.markdown("---")
@@ -76,9 +76,11 @@ with tab_kpi:
                     master_path = DEFAULT_MASTER_FILE
                     
                     if custom_file is not None:
-                        with open("data/TEMP_STSFORM.csv", "wb") as f:
+                        ext = custom_file.name.split('.')[-1]
+                        temp_sts = f"data/TEMP_STSFORM.{ext}"
+                        with open(temp_sts, "wb") as f:
                             f.write(custom_file.getbuffer())
-                        input_path = "data/TEMP_STSFORM.csv"
+                        input_path = temp_sts
                         
                     if custom_master is not None:
                         ext = custom_master.name.split('.')[-1]

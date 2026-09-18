@@ -138,20 +138,66 @@ def run_etl_kpi(target_start_date_str, target_end_date_str, input_file, master_f
         pass
     
     # ==========================================
-    # 3. EKSTRAKSI & PEMBERSIHAN DATA SERVIS (CSV)
+    # 3. EKSTRAKSI & PEMBERSIHAN DATA SERVIS (CSV / EXCEL)
     # ==========================================
-    df_raw = pd.read_csv(input_file, skiprows=3, low_memory=False)
+    is_excel = False
+    if isinstance(input_file, str) and (input_file.endswith('.xlsx') or input_file.endswith('.xls')):
+        is_excel = True
+        
+    df_raw = None
+    for skip in [0, 1, 2, 3, 4, 5, 17, 18]:
+        try:
+            if is_excel:
+                temp_df = pd.read_excel(input_file, skiprows=skip, nrows=5)
+            else:
+                temp_df = pd.read_csv(input_file, skiprows=skip, nrows=5, low_memory=False)
+            cols_check = [str(c).replace('\n', ' ').strip().upper() for c in temp_df.columns]
+            if any('NOPOL' in c for c in cols_check) or (any('STATUS' in c for c in cols_check) and any('MASUK' in c for c in cols_check)):
+                if is_excel:
+                    df_raw = pd.read_excel(input_file, skiprows=skip)
+                else:
+                    df_raw = pd.read_csv(input_file, skiprows=skip, low_memory=False)
+                break
+        except Exception:
+            continue
+
+    if df_raw is None:
+        if is_excel:
+            df_raw = pd.read_excel(input_file)
+        else:
+            df_raw = pd.read_csv(input_file, low_memory=False)
+
     df_raw.columns = [str(c).replace('\n', ' ').strip() for c in df_raw.columns]
     
-    csv_cols_map = {
-        'NOPOL': 'NOPOL',
-        'STATUS BENGKEL': 'STATUS_BENGKEL',
-        'TGL MASUK BENGKEL': 'TGL_MASUK',
-        'TGLKELUAR BENGKEL': 'TGL_KELUAR'
-    }
-    available_csv_cols = [c for c in csv_cols_map.keys() if c in df_raw.columns]
-    df_servis = df_raw[available_csv_cols].copy()
-    df_servis.rename(columns=csv_cols_map, inplace=True)
+    # Flexible column detection
+    col_nopol = None
+    col_status = None
+    col_tgl_masuk = None
+    col_tgl_keluar = None
+
+    for c in df_raw.columns:
+        c_clean = str(c).upper().replace('\n', ' ').replace('_', ' ').strip()
+        if not col_nopol and ('NOPOL' in c_clean or 'NO POL' in c_clean or 'POLISI' in c_clean):
+            col_nopol = c
+        elif not col_status and ('STATUS BENGKEL' in c_clean or 'STATUS_BENGKEL' in c_clean or c_clean == 'STATUS'):
+            col_status = c
+        elif not col_tgl_masuk and ('TGL MASUK' in c_clean or 'TANGGAL MASUK' in c_clean or 'MASUK BENGKEL' in c_clean):
+            col_tgl_masuk = c
+        elif not col_tgl_keluar and ('TGLKELUAR' in c_clean or 'TGL KELUAR' in c_clean or 'TANGGAL KELUAR' in c_clean or 'KELUAR BENGKEL' in c_clean):
+            col_tgl_keluar = c
+
+    cols_map = {}
+    if col_nopol: cols_map[col_nopol] = 'NOPOL'
+    if col_status: cols_map[col_status] = 'STATUS_BENGKEL'
+    if col_tgl_masuk: cols_map[col_tgl_masuk] = 'TGL_MASUK'
+    if col_tgl_keluar: cols_map[col_tgl_keluar] = 'TGL_KELUAR'
+
+    df_servis = df_raw[list(cols_map.keys())].copy()
+    df_servis.rename(columns=cols_map, inplace=True)
+    
+    for req in ['NOPOL', 'STATUS_BENGKEL', 'TGL_MASUK', 'TGL_KELUAR']:
+        if req not in df_servis.columns:
+            df_servis[req] = np.nan
     
     df_servis['NOPOL'] = df_servis['NOPOL'].astype(str).str.strip().str.upper()
     df_servis['STATUS_BENGKEL'] = df_servis['STATUS_BENGKEL'].astype(str).str.strip().str.upper()
